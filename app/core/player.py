@@ -19,10 +19,12 @@ class Player:
         self,
         on_step_start: Optional[Callable[[int, Step], None]] = None,
         on_step_done: Optional[Callable[[int, Step], None]] = None,
+        on_step_error: Optional[Callable[[int, Step, str], None]] = None,
         on_finished: Optional[Callable[[bool], None]] = None,
     ):
         self._on_step_start = on_step_start
         self._on_step_done = on_step_done
+        self._on_step_error = on_step_error
         self._on_finished = on_finished
         self._thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
@@ -64,10 +66,14 @@ class Player:
                     self._interruptible_sleep(step.duration_ms / 1000.0)
             except ConditionTimeoutError as e:
                 logger.error("Condition timeout at step %d: %s", i, e)
+                if self._on_step_error:
+                    self._on_step_error(i, step, str(e))
                 success = False
                 break
             except Exception as e:
                 logger.error("Error at step %d: %s", i, e)
+                if self._on_step_error:
+                    self._on_step_error(i, step, str(e))
                 success = False
                 break
 

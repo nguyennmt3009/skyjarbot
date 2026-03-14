@@ -13,6 +13,7 @@ from app.core.recorder import Recorder
 from app.core.scenario_engine import ScenarioEngine
 from app.core.serializer import save_scenario
 from app.core.logger_service import get_logger
+from app.ui.history_window import HistoryWindow
 
 logger = get_logger(__name__)
 
@@ -54,6 +55,7 @@ class MainWindow:
         ttk.Button(ctrl, text="💾  Save", width=14, command=self._save).grid(row=0, column=2, **pad)
         ttk.Button(ctrl, text="📂  Load", width=14, command=self._load).grid(row=0, column=3, **pad)
         ttk.Button(ctrl, text="🗑  Clear", width=14, command=self._clear).grid(row=0, column=4, **pad)
+        ttk.Button(ctrl, text="📊  History", width=14, command=self._open_history).grid(row=0, column=5, **pad)
 
         # ── Status bar
         self._status_var = tk.StringVar(value="Idle")
@@ -149,6 +151,9 @@ class MainWindow:
                 self._log(f"Loaded scenario from {path}")
             except Exception as e:
                 messagebox.showerror("Load error", str(e))
+
+    def _open_history(self) -> None:
+        HistoryWindow(self._root)
 
     def _clear(self) -> None:
         if self._engine.is_running:

@@ -356,21 +356,21 @@ Libraries considered:
 
 * pytesseract (done)
 * OpenCV (done)
-
+https://github.com/UB-Mannheim/tesseract/wiki
 ---
 
-### Phase 4 — Data & Reporting
+### Phase 4 — Data & Reporting (done)
 
 Goals:
 
-* Database storage
-* Execution history
-* Scenario statistics
-* Test reports
+* Database storage (done)
+* Execution history (done)
+* Scenario statistics (done)
+* Test reports (done)
 
 Possible database:
 
-* SQLite
+* SQLite (done)
 
 ---
 
