@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"c:/Users/bequa/OneDrive/Desktop/Travian account/skyjarbot/app/ui\" \"c:/Users/bequa/OneDrive/Desktop/Travian account/skyjarbot/app/core\" \"c:/Users/bequa/OneDrive/Desktop/Travian account/skyjarbot/app/platform\" \"c:/Users/bequa/OneDrive/Desktop/Travian account/skyjarbot/app/data/scenarios\")",
+      "Bash(touch \"c:/Users/bequa/OneDrive/Desktop/Travian account/skyjarbot/app/__init__.py\" \"c:/Users/bequa/OneDrive/Desktop/Travian account/skyjarbot/app/ui/__init__.py\" \"c:/Users/bequa/OneDrive/Desktop/Travian account/skyjarbot/app/core/__init__.py\" \"c:/Users/bequa/OneDrive/Desktop/Travian account/skyjarbot/app/platform/__init__.py\")"
+    ]
+  }
+}
