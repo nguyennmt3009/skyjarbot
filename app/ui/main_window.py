@@ -8,12 +8,15 @@ from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
 from typing import Optional
 
-from app.core.models import Scenario, Step
+from app.core.models import Scenario, Step, ActionStep, ConditionStep, DelayStep, ActionType, ConditionType
 from app.core.recorder import Recorder
 from app.core.scenario_engine import ScenarioEngine
 from app.core.serializer import save_scenario
 from app.core.logger_service import get_logger
 from app.ui.history_window import HistoryWindow
+from app.ui.add_step_dialog import AddStepDialog
+from app.ui.parallel_runner_window import ParallelRunnerWindow
+from app.core.models import BranchStep, SetVariableStep, CallScenarioStep
 
 logger = get_logger(__name__)
 
@@ -55,7 +58,9 @@ class MainWindow:
         ttk.Button(ctrl, text="💾  Save", width=14, command=self._save).grid(row=0, column=2, **pad)
         ttk.Button(ctrl, text="📂  Load", width=14, command=self._load).grid(row=0, column=3, **pad)
         ttk.Button(ctrl, text="🗑  Clear", width=14, command=self._clear).grid(row=0, column=4, **pad)
-        ttk.Button(ctrl, text="📊  History", width=14, command=self._open_history).grid(row=0, column=5, **pad)
+        ttk.Button(ctrl, text="➕  Add Step", width=14, command=self._add_step).grid(row=0, column=5, **pad)
+        ttk.Button(ctrl, text="📊  History",  width=14, command=self._open_history).grid(row=0, column=6, **pad)
+        ttk.Button(ctrl, text="⚡  Parallel",  width=14, command=self._open_parallel).grid(row=0, column=7, **pad)
 
         # ── Status bar
         self._status_var = tk.StringVar(value="Idle")
@@ -72,6 +77,13 @@ class MainWindow:
         self._steps_list.configure(yscrollcommand=scrollbar.set)
         self._steps_list.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
+
+        # right-click context menu
+        self._ctx_menu = tk.Menu(self._root, tearoff=0)
+        self._ctx_menu.add_command(label="Delete step", command=self._delete_selected_step)
+        self._ctx_menu.add_command(label="Move up",     command=self._move_step_up)
+        self._ctx_menu.add_command(label="Move down",   command=self._move_step_down)
+        self._steps_list.bind("<Button-3>", self._show_ctx_menu)
 
         # ── Log panel
         log_frame = ttk.LabelFrame(self._root, text="Log")
@@ -152,8 +164,65 @@ class MainWindow:
             except Exception as e:
                 messagebox.showerror("Load error", str(e))
 
+    def _add_step(self) -> None:
+        if self._current_scenario is None:
+            self._current_scenario = Scenario(name="scenario")
+        AddStepDialog(self._root, on_add=self._on_step_added)
+
+    def _on_step_added(self, step: Step) -> None:
+        self._current_scenario.steps.append(step)
+        idx = len(self._current_scenario.steps) - 1
+        self._steps_list.insert(tk.END, f"[{idx:03d}] {_describe_step(step)}")
+        self._btn_play.config(state="normal")
+        self._log(f"Step added: {_describe_step(step)}")
+
+    def _show_ctx_menu(self, event: tk.Event) -> None:
+        self._steps_list.selection_clear(0, tk.END)
+        self._steps_list.selection_set(self._steps_list.nearest(event.y))
+        self._ctx_menu.tk_popup(event.x_root, event.y_root)
+
+    def _delete_selected_step(self) -> None:
+        sel = self._steps_list.curselection()
+        if not sel or not self._current_scenario:
+            return
+        idx = sel[0]
+        self._current_scenario.steps.pop(idx)
+        self._refresh_steps_list()
+        self._log(f"Deleted step {idx}.")
+
+    def _move_step_up(self) -> None:
+        sel = self._steps_list.curselection()
+        if not sel or sel[0] == 0 or not self._current_scenario:
+            return
+        idx = sel[0]
+        steps = self._current_scenario.steps
+        steps[idx - 1], steps[idx] = steps[idx], steps[idx - 1]
+        self._refresh_steps_list()
+        self._steps_list.selection_set(idx - 1)
+
+    def _move_step_down(self) -> None:
+        sel = self._steps_list.curselection()
+        if not sel or not self._current_scenario:
+            return
+        idx = sel[0]
+        steps = self._current_scenario.steps
+        if idx >= len(steps) - 1:
+            return
+        steps[idx], steps[idx + 1] = steps[idx + 1], steps[idx]
+        self._refresh_steps_list()
+        self._steps_list.selection_set(idx + 1)
+
+    def _refresh_steps_list(self) -> None:
+        self._steps_list.delete(0, tk.END)
+        if self._current_scenario:
+            for i, step in enumerate(self._current_scenario.steps):
+                self._steps_list.insert(tk.END, f"[{i:03d}] {_describe_step(step)}")
+
     def _open_history(self) -> None:
         HistoryWindow(self._root)
+
+    def _open_parallel(self) -> None:
+        ParallelRunnerWindow(self._root)
 
     def _clear(self) -> None:
         if self._engine.is_running:
@@ -201,7 +270,6 @@ class MainWindow:
 # ── Step description helper ───────────────────────────────────────────────────
 
 def _describe_step(step) -> str:
-    from app.core.models import ActionStep, ConditionStep, DelayStep, ActionType
     if isinstance(step, DelayStep):
         return f"delay {step.duration_ms} ms"
     if isinstance(step, ActionStep):
@@ -217,5 +285,23 @@ def _describe_step(step) -> str:
         if t == ActionType.TYPE_TEXT:
             return f"type '{step.text}'"
     if isinstance(step, ConditionStep):
-        return f"pixel_condition ({step.x},{step.y}) == {step.expected_color}"
+        ct = step.condition_type
+        if ct == ConditionType.PIXEL_COLOR:
+            return f"pixel ({step.x},{step.y}) == {step.expected_color} ±{step.tolerance}"
+        if ct == ConditionType.IMAGE_MATCH:
+            import os
+            name = os.path.basename(step.template_path)
+            return f"image_match '{name}' threshold={step.match_threshold}"
+        if ct == ConditionType.OCR_TEXT:
+            mode = "contains" if step.ocr_contains else "exact"
+            return f"ocr_text '{step.expected_text}' [{mode}]"
+    if isinstance(step, BranchStep):
+        t_count = len(step.on_true)
+        f_count = len(step.on_false)
+        return f"branch [{_describe_step(step.condition)}] → true:{t_count} false:{f_count}"
+    if isinstance(step, SetVariableStep):
+        return f"set {step.name} = '{step.value}'"
+    if isinstance(step, CallScenarioStep):
+        import os
+        return f"call '{os.path.basename(step.scenario_path)}'"
     return repr(step)

@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import Union
 
 from app.core.models import (
-    Scenario, ActionStep, ConditionStep, DelayStep, Step,
-    ActionType, ConditionType, StepType,
+    Scenario, ActionStep, ConditionStep, DelayStep,
+    BranchStep, SetVariableStep, CallScenarioStep,
+    Step, ActionType, ConditionType, StepType,
 )
-# keep _CONDITION_TYPES in sync with ConditionType enum (populated at module load)
 
 
 # ── Serialize ────────────────────────────────────────────────────────────────
@@ -73,6 +73,20 @@ def _step_to_dict(step: Step) -> dict:
 
     if isinstance(step, DelayStep):
         return {"type": "delay", "duration_ms": step.duration_ms}
+
+    if isinstance(step, BranchStep):
+        return {
+            "type": "branch",
+            "condition": _step_to_dict(step.condition),
+            "on_true":  [_step_to_dict(s) for s in step.on_true],
+            "on_false": [_step_to_dict(s) for s in step.on_false],
+        }
+
+    if isinstance(step, SetVariableStep):
+        return {"type": "set_variable", "name": step.name, "value": step.value}
+
+    if isinstance(step, CallScenarioStep):
+        return {"type": "call_scenario", "scenario_path": step.scenario_path}
 
     raise ValueError(f"Unknown step type: {type(step)}")
 
@@ -143,6 +157,20 @@ def _dict_to_step(data: dict) -> Step:
 
     if t == "delay":
         return DelayStep(duration_ms=data.get("duration_ms", 1000))
+
+    if t == "branch":
+        condition = _dict_to_step(data["condition"])
+        return BranchStep(
+            condition=condition,
+            on_true=[_dict_to_step(s) for s in data.get("on_true", [])],
+            on_false=[_dict_to_step(s) for s in data.get("on_false", [])],
+        )
+
+    if t == "set_variable":
+        return SetVariableStep(name=data.get("name", ""), value=data.get("value", ""))
+
+    if t == "call_scenario":
+        return CallScenarioStep(scenario_path=data.get("scenario_path", ""))
 
     raise ValueError(f"Unknown step type in JSON: {t!r}")
 

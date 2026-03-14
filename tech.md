@@ -374,14 +374,14 @@ Possible database:
 
 ---
 
-### Phase 5 — Advanced Automation
+### Phase 5 — Advanced Automation (done)
 
 Potential future features:
 
-* branching logic
-* variables
-* reusable scenario blocks
-* parallel test execution
+* branching logic (done)
+* variables (done)
+* reusable scenario blocks (done)
+* parallel test execution (done)
 * visual scenario editor
 
 ---

@@ -5,9 +5,12 @@ from enum import Enum
 
 
 class StepType(str, Enum):
-    ACTION = "action"
-    CONDITION = "condition"
-    DELAY = "delay"
+    ACTION        = "action"
+    CONDITION     = "condition"
+    DELAY         = "delay"
+    BRANCH        = "branch"
+    SET_VARIABLE  = "set_variable"
+    CALL_SCENARIO = "call_scenario"
 
 
 class ActionType(str, Enum):
@@ -67,7 +70,31 @@ class DelayStep:
     duration_ms: int = 1000
 
 
-Step = ActionStep | ConditionStep | DelayStep
+@dataclass
+class BranchStep:
+    """If condition → run on_true steps, else → run on_false steps."""
+    step_type: StepType = field(default=StepType.BRANCH, init=False)
+    condition: ConditionStep = field(default_factory=ConditionStep)
+    on_true:  List = field(default_factory=list)   # List[Step]
+    on_false: List = field(default_factory=list)   # List[Step]
+
+
+@dataclass
+class SetVariableStep:
+    """Set a named variable. Value can contain {other_var} references."""
+    step_type: StepType = field(default=StepType.SET_VARIABLE, init=False)
+    name:  str = ""
+    value: str = ""   # literal or expression like "{counter}"
+
+
+@dataclass
+class CallScenarioStep:
+    """Load and execute another scenario file inline."""
+    step_type: StepType = field(default=StepType.CALL_SCENARIO, init=False)
+    scenario_path: str = ""
+
+
+Step = ActionStep | ConditionStep | DelayStep | BranchStep | SetVariableStep | CallScenarioStep
 
 
 @dataclass
