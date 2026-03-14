@@ -332,30 +332,30 @@ Goals:
 
 ---
 
-### Phase 2 — Scenario Engine
+### Phase 2 — Scenario Engine (done)
 
 Goals:
 
-* Step model
-* ActionStep
-* ConditionStep
-* DelayStep
-* Pixel condition
+* Step model (done)
+* ActionStep (done)
+* ConditionStep (done)
+* DelayStep (done)
+* Pixel condition (done)
 
 ---
 
-### Phase 3 — Screen Intelligence
+### Phase 3 — Screen Intelligence (done)
 
 Goals:
 
-* OCR support
-* Image template matching
-* Region capture
+* OCR support (done)
+* Image template matching (done)
+* Region capture (done)
 
 Libraries considered:
 
-* pytesseract
-* OpenCV
+* pytesseract (done)
+* OpenCV (done)
 
 ---
 

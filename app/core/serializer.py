@@ -11,6 +11,7 @@ from app.core.models import (
     Scenario, ActionStep, ConditionStep, DelayStep, Step,
     ActionType, ConditionType, StepType,
 )
+# keep _CONDITION_TYPES in sync with ConditionType enum (populated at module load)
 
 
 # ── Serialize ────────────────────────────────────────────────────────────────
@@ -44,15 +45,31 @@ def _step_to_dict(step: Step) -> dict:
         return d
 
     if isinstance(step, ConditionStep):
-        return {
+        base = {
             "type": step.condition_type.value,
-            "x": step.x,
-            "y": step.y,
-            "color": list(step.expected_color),
-            "tolerance": step.tolerance,
             "timeout_ms": step.timeout_ms,
             "poll_interval_ms": step.poll_interval_ms,
         }
+        if step.condition_type == ConditionType.PIXEL_COLOR:
+            base.update({
+                "x": step.x,
+                "y": step.y,
+                "color": list(step.expected_color),
+                "tolerance": step.tolerance,
+            })
+        elif step.condition_type == ConditionType.IMAGE_MATCH:
+            base.update({
+                "template_path": step.template_path,
+                "match_threshold": step.match_threshold,
+                "search_region": list(step.search_region) if step.search_region else None,
+            })
+        elif step.condition_type == ConditionType.OCR_TEXT:
+            base.update({
+                "expected_text": step.expected_text,
+                "ocr_contains": step.ocr_contains,
+                "ocr_region": list(step.ocr_region) if step.ocr_region else None,
+            })
+        return base
 
     if isinstance(step, DelayStep):
         return {"type": "delay", "duration_ms": step.duration_ms}
@@ -92,16 +109,37 @@ def _dict_to_step(data: dict) -> Step:
         return step
 
     if t in _CONDITION_TYPES:
-        color = tuple(data.get("color", [0, 0, 0]))
-        return ConditionStep(
-            condition_type=ConditionType(t),
-            x=data.get("x", 0),
-            y=data.get("y", 0),
-            expected_color=color,
-            tolerance=data.get("tolerance", 10),
+        ct = ConditionType(t)
+        common = dict(
+            condition_type=ct,
             timeout_ms=data.get("timeout_ms", 5000),
             poll_interval_ms=data.get("poll_interval_ms", 200),
         )
+        if ct == ConditionType.PIXEL_COLOR:
+            color = tuple(data.get("color", [0, 0, 0]))
+            return ConditionStep(
+                **common,
+                x=data.get("x", 0),
+                y=data.get("y", 0),
+                expected_color=color,
+                tolerance=data.get("tolerance", 10),
+            )
+        if ct == ConditionType.IMAGE_MATCH:
+            sr = data.get("search_region")
+            return ConditionStep(
+                **common,
+                template_path=data.get("template_path", ""),
+                match_threshold=data.get("match_threshold", 0.8),
+                search_region=tuple(sr) if sr else None,
+            )
+        if ct == ConditionType.OCR_TEXT:
+            ocr_r = data.get("ocr_region")
+            return ConditionStep(
+                **common,
+                expected_text=data.get("expected_text", ""),
+                ocr_contains=data.get("ocr_contains", True),
+                ocr_region=tuple(ocr_r) if ocr_r else None,
+            )
 
     if t == "delay":
         return DelayStep(duration_ms=data.get("duration_ms", 1000))

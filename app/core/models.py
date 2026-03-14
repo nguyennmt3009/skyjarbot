@@ -20,6 +20,8 @@ class ActionType(str, Enum):
 
 class ConditionType(str, Enum):
     PIXEL_COLOR = "pixel_color"
+    IMAGE_MATCH = "image_match"
+    OCR_TEXT    = "ocr_text"
 
 
 @dataclass
@@ -39,12 +41,24 @@ class ActionStep:
 class ConditionStep:
     step_type: StepType = field(default=StepType.CONDITION, init=False)
     condition_type: ConditionType = ConditionType.PIXEL_COLOR
+    timeout_ms: int = 5000
+    poll_interval_ms: int = 200
+
+    # pixel_color fields
     x: int = 0
     y: int = 0
     expected_color: Tuple[int, int, int] = (0, 0, 0)
     tolerance: int = 10
-    timeout_ms: int = 5000
-    poll_interval_ms: int = 200
+
+    # image_match fields
+    template_path: str = ""
+    match_threshold: float = 0.8
+    search_region: Optional[Tuple[int, int, int, int]] = None  # x, y, w, h
+
+    # ocr_text fields
+    ocr_region: Optional[Tuple[int, int, int, int]] = None  # x, y, w, h
+    expected_text: str = ""
+    ocr_contains: bool = True   # True = substring match, False = exact match
 
 
 @dataclass
