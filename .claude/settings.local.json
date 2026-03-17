@@ -6,7 +6,8 @@
       "Bash(for f:*)",
       "Bash(do echo:*)",
       "Read(//c/Users/bequa/OneDrive/Desktop/Travian account/skyjarbot/app/core/**)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(py -c \":*)"
     ]
   }
 }

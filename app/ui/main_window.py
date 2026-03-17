@@ -7,6 +7,9 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
 from typing import Optional
+from PIL import Image, ImageTk
+
+_LOGO_PATH = Path(__file__).resolve().parent.parent / "images" / "logo.jpg"
 
 from app.core.models import Scenario, Step, ActionStep, ConditionStep, DelayStep, ActionType, ConditionType
 from app.core.recorder import Recorder
@@ -27,7 +30,7 @@ _SCENARIOS_DIR.mkdir(parents=True, exist_ok=True)
 class MainWindow:
     def __init__(self, root: tk.Tk):
         self._root = root
-        self._root.title("SkyjarBot — Macro Recorder")
+        self._root.title("Skyjar Bot")
         self._root.resizable(False, False)
 
         self._recorder = Recorder(on_step_recorded=self._on_step_recorded)
@@ -37,17 +40,31 @@ class MainWindow:
             on_finished=self._on_finished,
         )
         self._current_scenario: Optional[Scenario] = None
+        self._logo_img: Optional[ImageTk.PhotoImage] = None
 
+        self._set_window_icon()
         self._build_ui()
 
     # ── UI Construction ───────────────────────────────────────────────────────
 
+    def _set_window_icon(self) -> None:
+        if not _LOGO_PATH.exists():
+            return
+        try:
+            img = Image.open(_LOGO_PATH).resize((32, 32), Image.LANCZOS)
+            self._icon_img = ImageTk.PhotoImage(img)
+            self._root.iconphoto(True, self._icon_img)
+        except Exception as e:
+            logger.warning("Could not set window icon: %s", e)
+
     def _build_ui(self) -> None:
         pad = {"padx": 8, "pady": 4}
 
+        _row_offset = 0
+
         # ── Top bar: record / playback controls
         ctrl = ttk.LabelFrame(self._root, text="Controls")
-        ctrl.grid(row=0, column=0, columnspan=2, sticky="ew", **pad)
+        ctrl.grid(row=_row_offset, column=0, columnspan=2, sticky="ew", **pad)
 
         self._btn_record = ttk.Button(ctrl, text="⏺  Record", width=14, command=self._toggle_record)
         self._btn_record.grid(row=0, column=0, **pad)
@@ -65,12 +82,12 @@ class MainWindow:
         # ── Status bar
         self._status_var = tk.StringVar(value="Idle")
         ttk.Label(self._root, textvariable=self._status_var, anchor="w", relief="sunken").grid(
-            row=1, column=0, columnspan=2, sticky="ew", padx=8, pady=2
+            row=_row_offset + 1, column=0, columnspan=2, sticky="ew", padx=8, pady=2
         )
 
         # ── Steps list
         steps_frame = ttk.LabelFrame(self._root, text="Recorded Steps")
-        steps_frame.grid(row=2, column=0, sticky="nsew", **pad)
+        steps_frame.grid(row=_row_offset + 2, column=0, sticky="nsew", **pad)
 
         self._steps_list = tk.Listbox(steps_frame, width=55, height=20, font=("Consolas", 9))
         scrollbar = ttk.Scrollbar(steps_frame, orient="vertical", command=self._steps_list.yview)
@@ -87,7 +104,7 @@ class MainWindow:
 
         # ── Log panel
         log_frame = ttk.LabelFrame(self._root, text="Log")
-        log_frame.grid(row=2, column=1, sticky="nsew", **pad)
+        log_frame.grid(row=_row_offset + 2, column=1, sticky="nsew", **pad)
 
         self._log_text = tk.Text(log_frame, width=40, height=20, font=("Consolas", 9), state="disabled")
         log_scroll = ttk.Scrollbar(log_frame, orient="vertical", command=self._log_text.yview)

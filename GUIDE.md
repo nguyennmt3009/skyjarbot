@@ -529,3 +529,4 @@ A: Hiện tại sub-steps của Branch chỉ chỉnh được qua JSON. Mở fil
 ---
 
 *SkyjarBot v1.0 — Built with Python + Tkinter + pynput + Pillow + OpenCV + pytesseract*
+ 
