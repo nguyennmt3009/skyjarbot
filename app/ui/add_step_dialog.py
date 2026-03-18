@@ -88,6 +88,12 @@ class AddStepDialog(tk.Toplevel):
         self._a_dx = self._field(self._action_fields_frame, "dx (scroll):", 5, default="0")
         self._a_dy = self._field(self._action_fields_frame, "dy (scroll):", 6, default="0")
 
+        self._action_pick_btn = ttk.Button(
+            self._action_fields_frame, text="🎯 Pick point",
+            command=self._pick_action_xy,
+        )
+        self._action_pick_btn.grid(row=0, column=2, rowspan=2, padx=6, pady=2, sticky="w")
+
         self._refresh_action_fields()
         return f
 
@@ -112,6 +118,10 @@ class AddStepDialog(tk.Toplevel):
             else:
                 lbl.grid_remove()
                 ent.grid_remove()
+        if "x" in show:
+            self._action_pick_btn.grid()
+        else:
+            self._action_pick_btn.grid_remove()
 
     # ── Condition panel ───────────────────────────────────────────────────────
 
@@ -138,8 +148,10 @@ class AddStepDialog(tk.Toplevel):
         self._pc_g         = self._field(self._pc_frame, "G:", 3, default="0")
         self._pc_b         = self._field(self._pc_frame, "B:", 4, default="0")
         self._pc_tolerance = self._field(self._pc_frame, "Tolerance:", 5, default="10")
-        ttk.Button(self._pc_frame, text="Sample pixel from screen",
-                   command=self._sample_pixel).grid(row=6, column=0, columnspan=2, pady=4)
+        ttk.Button(
+            self._pc_frame, text="🎯 Pick & sample pixel",
+            command=self._pick_pc_xy,
+        ).grid(row=0, column=2, rowspan=2, padx=6, pady=2, sticky="w")
 
         # image_match fields
         self._im_frame = ttk.LabelFrame(f, text="Image Match")
@@ -150,6 +162,10 @@ class AddStepDialog(tk.Toplevel):
         self._im_threshold = self._field(self._im_frame, "Match threshold (0–1):", 2, default="0.8")
         self._im_region    = self._field(self._im_frame, "Search region (x,y,w,h):", 3,
                                          default="", hint="leave blank for full screen")
+        ttk.Button(
+            self._im_frame, text="🎯 Pick region",
+            command=self._pick_im_region,
+        ).grid(row=3, column=3, padx=6, pady=2, sticky="w")
 
         # ocr_text fields
         self._ocr_frame = ttk.LabelFrame(f, text="OCR Text")
@@ -160,6 +176,10 @@ class AddStepDialog(tk.Toplevel):
                         variable=self._ocr_contains).grid(row=1, column=0, columnspan=2, pady=2)
         self._ocr_region   = self._field(self._ocr_frame, "OCR region (x,y,w,h):", 2,
                                          default="", hint="leave blank for full screen")
+        ttk.Button(
+            self._ocr_frame, text="🎯 Pick region",
+            command=self._pick_ocr_region,
+        ).grid(row=2, column=3, padx=6, pady=2, sticky="w")
 
         self._refresh_condition_fields()
         return f
@@ -214,6 +234,10 @@ class AddStepDialog(tk.Toplevel):
 
         self._br_px = self._field(f, "X:", 1)
         self._br_py = self._field(f, "Y:", 2)
+        ttk.Button(
+            f, text="🎯 Pick point",
+            command=self._pick_branch_xy,
+        ).grid(row=1, column=2, rowspan=2, padx=6, pady=2, sticky="w")
         self._br_pr = self._field(f, "R:", 3, default="0")
         self._br_pg = self._field(f, "G:", 4, default="0")
         self._br_pb = self._field(f, "B:", 5, default="0")
@@ -295,35 +319,68 @@ class AddStepDialog(tk.Toplevel):
                                  "Region must be 4 integers: x,y,w,h", parent=self)
             return None
 
-    # ── Screen sampler ────────────────────────────────────────────────────────
+    # ── Screen picker ─────────────────────────────────────────────────────────
 
-    def _sample_pixel(self) -> None:
-        """Hide dialog, wait 3 s, then sample pixel color at mouse position."""
-        import threading, time
-        from pynput.mouse import Controller as MouseCtrl
-        from app.platform.screen_capture import get_pixel_color
+    def _open_picker(self, mode: str, on_done) -> None:
+        """Hide this modal dialog, open the fullscreen picker, then restore."""
+        from app.ui.screen_picker import ScreenPickerOverlay
 
+        self.grab_release()
         self.withdraw()
 
-        def _sample():
-            for i in range(3, 0, -1):
-                self.after(0, lambda n=i: self.title(f"Move mouse to target pixel… {n}"))
-                time.sleep(1)
-            mouse = MouseCtrl()
-            x, y = int(mouse.position[0]), int(mouse.position[1])
-            r, g, b = get_pixel_color(x, y)
-            self.after(0, lambda: self._apply_sample(x, y, r, g, b))
+        def _callback(result):
+            self.deiconify()
+            self.grab_set()
+            on_done(result)
 
-        threading.Thread(target=_sample, daemon=True).start()
+        # Small delay so the dialog visually disappears before the screenshot
+        self.after(150, lambda: ScreenPickerOverlay(self, mode=mode, callback=_callback))
 
-    def _apply_sample(self, x: int, y: int, r: int, g: int, b: int) -> None:
-        self.deiconify()
-        self.title("Add Step")
-        self._pc_x[1].delete(0, tk.END); self._pc_x[1].insert(0, str(x))
-        self._pc_y[1].delete(0, tk.END); self._pc_y[1].insert(0, str(y))
-        self._pc_r[1].delete(0, tk.END); self._pc_r[1].insert(0, str(r))
-        self._pc_g[1].delete(0, tk.END); self._pc_g[1].insert(0, str(g))
-        self._pc_b[1].delete(0, tk.END); self._pc_b[1].insert(0, str(b))
+    def _pick_action_xy(self) -> None:
+        def _done(result):
+            if result:
+                x, y = result[0], result[1]
+                self._ax[1].delete(0, tk.END); self._ax[1].insert(0, str(x))
+                self._ay[1].delete(0, tk.END); self._ay[1].insert(0, str(y))
+        self._open_picker("point", _done)
+
+    def _pick_pc_xy(self) -> None:
+        from app.platform.screen_capture import get_pixel_color
+
+        def _done(result):
+            if result:
+                x, y = result[0], result[1]
+                r, g, b = get_pixel_color(x, y)
+                self._pc_x[1].delete(0, tk.END); self._pc_x[1].insert(0, str(x))
+                self._pc_y[1].delete(0, tk.END); self._pc_y[1].insert(0, str(y))
+                self._pc_r[1].delete(0, tk.END); self._pc_r[1].insert(0, str(r))
+                self._pc_g[1].delete(0, tk.END); self._pc_g[1].insert(0, str(g))
+                self._pc_b[1].delete(0, tk.END); self._pc_b[1].insert(0, str(b))
+        self._open_picker("point", _done)
+
+    def _pick_im_region(self) -> None:
+        def _done(result):
+            if result and len(result) == 4:
+                x, y, w, h = result
+                self._im_region[1].delete(0, tk.END)
+                self._im_region[1].insert(0, f"{x},{y},{w},{h}")
+        self._open_picker("region", _done)
+
+    def _pick_ocr_region(self) -> None:
+        def _done(result):
+            if result and len(result) == 4:
+                x, y, w, h = result
+                self._ocr_region[1].delete(0, tk.END)
+                self._ocr_region[1].insert(0, f"{x},{y},{w},{h}")
+        self._open_picker("region", _done)
+
+    def _pick_branch_xy(self) -> None:
+        def _done(result):
+            if result:
+                x, y = result[0], result[1]
+                self._br_px[1].delete(0, tk.END); self._br_px[1].insert(0, str(x))
+                self._br_py[1].delete(0, tk.END); self._br_py[1].insert(0, str(y))
+        self._open_picker("point", _done)
 
     def _browse_template(self) -> None:
         path = filedialog.askopenfilename(
