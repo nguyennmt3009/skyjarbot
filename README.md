@@ -1,7 +1,24 @@
 # skyjarbot
 
 
-## Build exe:
+## Chạy trực tiếp (không cần build):
+
+**Yêu cầu:** Python 3.10+
+
+1. Cài dependencies:
+```
+py -m pip install -r requirements.txt
+```
+
+> Nếu dùng `pytesseract`, cần cài thêm [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) và thêm vào PATH.
+
+2. Chạy app:
+```
+py run.py
+```
+
+
+## Build exe (tuỳ chọn — để phân phối cho người không có Python):
 
 
 ```
