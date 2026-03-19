@@ -200,7 +200,9 @@ class AddStepDialog(tk.Toplevel):
 
     def _build_delay_panel(self, parent: tk.Widget) -> ttk.LabelFrame:
         f = ttk.LabelFrame(parent, text="Delay")
-        self._delay_ms = self._field(f, "Duration (ms):", 0, default="1000")
+        self._delay_ms     = self._field(f, "Min (ms):", 0, default="1000")
+        self._delay_max_ms = self._field(f, "Max (ms):", 1, default="",
+                                         hint="leave blank for fixed delay")
         return f
 
     # ── Panel visibility ──────────────────────────────────────────────────────
@@ -403,7 +405,11 @@ class AddStepDialog(tk.Toplevel):
         t = self._step_type_var.get()
 
         if t == "delay":
-            return DelayStep(duration_ms=self._int(self._delay_ms, 1000))
+            step = DelayStep(duration_ms=self._int(self._delay_ms, 1000))
+            max_raw = self._str(self._delay_max_ms)
+            if max_raw:
+                step.duration_max_ms = self._int(self._delay_max_ms)
+            return step
 
         if t == "action":
             at = ActionType(self._action_type_var.get())

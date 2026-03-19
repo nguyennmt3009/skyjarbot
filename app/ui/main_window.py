@@ -288,6 +288,8 @@ class MainWindow:
 
 def _describe_step(step) -> str:
     if isinstance(step, DelayStep):
+        if step.duration_max_ms is not None and step.duration_max_ms > step.duration_ms:
+            return f"delay {step.duration_ms}–{step.duration_max_ms} ms (random)"
         return f"delay {step.duration_ms} ms"
     if isinstance(step, ActionStep):
         t = step.action_type

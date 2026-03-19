@@ -72,7 +72,10 @@ def _step_to_dict(step: Step) -> dict:
         return base
 
     if isinstance(step, DelayStep):
-        return {"type": "delay", "duration_ms": step.duration_ms}
+        d = {"type": "delay", "duration_ms": step.duration_ms}
+        if step.duration_max_ms is not None:
+            d["duration_max_ms"] = step.duration_max_ms
+        return d
 
     if isinstance(step, BranchStep):
         return {
@@ -156,7 +159,9 @@ def _dict_to_step(data: dict) -> Step:
             )
 
     if t == "delay":
-        return DelayStep(duration_ms=data.get("duration_ms", 1000))
+        step = DelayStep(duration_ms=data.get("duration_ms", 1000))
+        step.duration_max_ms = data.get("duration_max_ms")
+        return step
 
     if t == "branch":
         condition = _dict_to_step(data["condition"])

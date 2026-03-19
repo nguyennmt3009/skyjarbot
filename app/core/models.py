@@ -68,6 +68,7 @@ class ConditionStep:
 class DelayStep:
     step_type: StepType = field(default=StepType.DELAY, init=False)
     duration_ms: int = 1000
+    duration_max_ms: Optional[int] = None   # if set, delay = random(duration_ms, duration_max_ms)
 
 
 @dataclass

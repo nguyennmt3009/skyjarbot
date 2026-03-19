@@ -4,6 +4,7 @@ Supports branching, variables, and nested/call scenarios.
 """
 from __future__ import annotations
 import time
+import random
 import threading
 from typing import List, Callable, Optional
 
@@ -101,8 +102,12 @@ class Player:
             return True
 
         if isinstance(step, DelayStep):
-            logger.debug("Delay step %d: %d ms", i, step.duration_ms)
-            self._interruptible_sleep(step.duration_ms / 1000.0)
+            if step.duration_max_ms is not None and step.duration_max_ms > step.duration_ms:
+                actual_ms = random.randint(step.duration_ms, step.duration_max_ms)
+            else:
+                actual_ms = step.duration_ms
+            logger.debug("Delay step %d: %d ms", i, actual_ms)
+            self._interruptible_sleep(actual_ms / 1000.0)
             return True
 
         if isinstance(step, BranchStep):
