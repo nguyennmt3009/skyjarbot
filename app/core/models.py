@@ -9,6 +9,7 @@ class StepType(str, Enum):
     CONDITION     = "condition"
     DELAY         = "delay"
     BRANCH        = "branch"
+    LOOP          = "loop"
     SET_VARIABLE  = "set_variable"
     CALL_SCENARIO = "call_scenario"
 
@@ -81,6 +82,14 @@ class BranchStep:
 
 
 @dataclass
+class LoopStep:
+    """Repeat body steps count times. count=0 means infinite."""
+    step_type: StepType = field(default=StepType.LOOP, init=False)
+    count: int = 1                         # 0 = infinite
+    body: List = field(default_factory=list)   # List[Step]
+
+
+@dataclass
 class SetVariableStep:
     """Set a named variable. Value can contain {other_var} references."""
     step_type: StepType = field(default=StepType.SET_VARIABLE, init=False)
@@ -95,7 +104,7 @@ class CallScenarioStep:
     scenario_path: str = ""
 
 
-Step = ActionStep | ConditionStep | DelayStep | BranchStep | SetVariableStep | CallScenarioStep
+Step = ActionStep | ConditionStep | DelayStep | BranchStep | LoopStep | SetVariableStep | CallScenarioStep
 
 
 @dataclass

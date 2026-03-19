@@ -9,7 +9,7 @@ from typing import Union
 
 from app.core.models import (
     Scenario, ActionStep, ConditionStep, DelayStep,
-    BranchStep, SetVariableStep, CallScenarioStep,
+    BranchStep, LoopStep, SetVariableStep, CallScenarioStep,
     Step, ActionType, ConditionType, StepType,
 )
 
@@ -83,6 +83,13 @@ def _step_to_dict(step: Step) -> dict:
             "condition": _step_to_dict(step.condition),
             "on_true":  [_step_to_dict(s) for s in step.on_true],
             "on_false": [_step_to_dict(s) for s in step.on_false],
+        }
+
+    if isinstance(step, LoopStep):
+        return {
+            "type": "loop",
+            "count": step.count,
+            "body": [_step_to_dict(s) for s in step.body],
         }
 
     if isinstance(step, SetVariableStep):
@@ -169,6 +176,12 @@ def _dict_to_step(data: dict) -> Step:
             condition=condition,
             on_true=[_dict_to_step(s) for s in data.get("on_true", [])],
             on_false=[_dict_to_step(s) for s in data.get("on_false", [])],
+        )
+
+    if t == "loop":
+        return LoopStep(
+            count=data.get("count", 1),
+            body=[_dict_to_step(s) for s in data.get("body", [])],
         )
 
     if t == "set_variable":

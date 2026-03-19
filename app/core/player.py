@@ -10,7 +10,7 @@ from typing import List, Callable, Optional
 
 from app.core.models import (
     ActionStep, ConditionStep, DelayStep,
-    BranchStep, SetVariableStep, CallScenarioStep,
+    BranchStep, LoopStep, SetVariableStep, CallScenarioStep,
     Step,
 )
 from app.core.actions import execute_action
@@ -113,6 +113,9 @@ class Player:
         if isinstance(step, BranchStep):
             return self._execute_branch(i, step)
 
+        if isinstance(step, LoopStep):
+            return self._execute_loop(i, step)
+
         if isinstance(step, SetVariableStep):
             resolved_value = self._variables.resolve(step.value)
             self._variables.set(step.name, resolved_value)
@@ -138,6 +141,19 @@ class Player:
         logger.info("Branch step %d: condition=%s → executing %s (%d steps)",
                     i, condition_met, label, len(branch))
         return self._execute_steps(branch, top_level=False)
+
+    # ── Loop ──────────────────────────────────────────────────────────────────
+
+    def _execute_loop(self, i: int, step: LoopStep) -> bool:
+        target = step.count if step.count > 0 else None   # None = infinite
+        iteration = 0
+        logger.info("Loop step %d: count=%s body=%d steps", i, step.count or "∞", len(step.body))
+        while (target is None or iteration < target) and not self._stop_event.is_set():
+            ok = self._execute_steps(step.body, top_level=False)
+            if not ok:
+                return False
+            iteration += 1
+        return True
 
     # ── Call scenario ─────────────────────────────────────────────────────────
 
